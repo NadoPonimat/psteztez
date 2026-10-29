@@ -42,7 +42,7 @@ on:
 
 jobs:
   build-apk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       APP_ID: ${{ github.event.inputs.app_id }}
       APP_NAME: ${{ github.event.inputs.app_name }}
