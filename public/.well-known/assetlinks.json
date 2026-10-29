@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "kz.playzone.crm",
+      "sha256_cert_fingerprints": [
+        "64:32:BB:DD:E0:A2:77:80:E7:69:5A:4A:B9:85:67:FF:11:E3:EC:97:A7:8B:AD:BE:F2:C1:A5:76:97:B5:12:A3"
+      ]
+    }
+  }
+]
