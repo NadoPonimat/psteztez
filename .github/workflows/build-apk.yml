@@ -110,6 +110,7 @@ jobs:
       - name: Create signing key (только первая сборка)
         working-directory: android
         run: |
+          mkdir -p "$(dirname "$KEYSTORE_PATH")"
           if [ ! -f "$KEYSTORE_PATH" ]; then
             keytool -genkeypair \
               -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" \
