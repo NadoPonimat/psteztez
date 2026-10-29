@@ -50,6 +50,16 @@
             </intent-filter>
         </activity>
 
+        <!-- Экран управления данными сайта (без него приложение падает при запуске) -->
+        <activity
+            android:name="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:exported="true">
+            <meta-data
+                android:name="android.support.customtabs.trusted.MANAGE_SPACE_URL"
+                android:value="@string/launchUrl" />
+        </activity>
+
         <!-- Доставка веб-уведомлений сайта как системных уведомлений Android -->
         <service
             android:name="com.google.androidbrowserhelper.trusted.DelegationService"
