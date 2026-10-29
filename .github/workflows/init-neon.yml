@@ -1,1 +1,19 @@
+name: Init Neon database
 
+on:
+  workflow_dispatch:
+
+jobs:
+  init:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECT }}
+      DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - name: Create tables
+        run: bunx prisma db push --accept-data-loss
+      - name: Create admin user
+        run: bun scripts/init-db.ts
