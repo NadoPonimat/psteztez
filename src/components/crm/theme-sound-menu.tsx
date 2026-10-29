@@ -22,6 +22,16 @@ import {
   type PushStatus,
 } from "@/lib/push-client";
 
+// Внутри нативного APK-оболочки (Android) Web Push не используется:
+// уведомления включает сама система через Firebase — со стандартным
+// системным запросом разрешения при первом запуске.
+function isNativeApk(): boolean {
+  return (
+    typeof navigator !== "undefined" &&
+    navigator.userAgent.includes("PlayZoneNative")
+  );
+}
+
 // Блок «Уведомления на телефоне»: подписка этого устройства на Web Push —
 // уведомления о конце времени приходят даже когда CRM свёрнута или закрыта.
 function PushToggle() {
@@ -32,6 +42,19 @@ function PushToggle() {
   useEffect(() => {
     void getPushStatus().then(setStatus);
   }, []);
+
+  if (isNativeApk()) {
+    return (
+      <div className="px-2 py-1.5">
+        <DropdownMenuLabel className="px-0">Уведомления на телефоне</DropdownMenuLabel>
+        <p className="text-[11px] text-muted-foreground">
+          В приложении всё включается само: при первом запуске Android спросит
+          разрешение — нажмите «Разрешить». Звук и вибрация: Настройки →
+          Приложения → PlayZone → Уведомления.
+        </p>
+      </div>
+    );
+  }
 
   async function toggle() {
     setBusy(true);

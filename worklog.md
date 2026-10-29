@@ -405,3 +405,76 @@ database» С seed=OFF (seed.ts использует create — на живой 
 download/VAPID_ключи.txt (3 переменные для Vercel env).
 Подписок в базе ещё нет (push ни разу не включался на устройствах),
 поэтому смена ключей безболезненна.
+
+## Этап: ручной push схемы в Neon, минуя GitHub Actions (29.10.2026)
+
+Пользователь не нашёл чекбокс seed в Run workflow — переживал, что пропали
+устройства (на деле: новый код уже был на Vercel, а колонки pushedAt в базе
+ещё не было → /api/dashboard падал с 500, экран выглядел пустым).
+
+Решение: пользователь прислал DATABASE_URL (Neon, eu-central-1),
+выполнен локально `bunx prisma db push --skip-generate` (7.7 c, только
+добавление: PushSubscription + Session.pushedAt — без потерь).
+Проверка через pg: 18 таблиц, pushedAt ЕСТЬ, данные целы
+(Device 6, Package 3, Session 5, Customer 1, User 2, PushSubscription 0).
+
+Примечание: пароль базы засветился в чате — пользователю предложено
+по желанию сбросить пароль в Neon (с обновлением DATABASE_URL в Vercel
+и DATABASE_URL_DIRECT в GitHub secrets). Init Neon workflow для него
+теперь чисто опционален.
+
+## Этап: нативная APK-оболочка с Firebase (FCM) (30.10.2026)
+
+Мотив: у друга пользователя Android заблокировал уведомления TWA, а
+стандартного системного запроса разрешения web-push так и не увидели.
+Решение — «меняем не язык, а оболочку»: тонкий нативный APK (Java,
+без Android Studio) с WebView на psteztez.vercel.app и Firebase Cloud
+Messaging. Весь интерфейс/база/логика CRM не меняются.
+
+БЭКЕНД:
+- prisma/schema.prisma: +model FcmToken (token @unique, label, lastError,
+  lastSeenAt); миграция на Neon выполнена локально `bunx prisma db push`
+  (только добавление таблицы — без потерь).
+- src/lib/fcm.ts: ленивый init firebase-admin 14.5.0 (cert из env
+  FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY,
+  replace(\\n)); sendFcmToAll — data-сообщения priority:high всем токенам,
+  чистка мёртвых токенов (registration-token-not-registered). Без env —
+  модуль безвредно отключён.
+- src/lib/push.ts: flushOverduePushes теперь шлёт И web-push (если VAPID
+  задан), И FCM (если задан) в одном проходе; hasPendingOverduePushes
+  учитывает оба канала.
+- src/app/api/push/register-fcm/route.ts (новый): POST upsert токена —
+  вызывается самим APK при каждом запуске и onNewToken.
+- src/components/crm/theme-sound-menu.tsx: при UA-метке PlayZoneNative
+  блок веб-push заменяется подсказкой «включается само, Android спросит
+  при первом запуске».
+- bun add firebase-admin (bun.lock обновлён). tsc: 0 новых ошибок.
+
+АНДРОИД (android/, package com.playzone.crm, minSdk 24 / targetSdk 34):
+- MainActivity: WebView (JS+DOM storage, UA+PlayZoneNative/1.0), request
+  POST_NOTIFICATIONS на Android 13+ (стандартный системный диалог),
+  registerFcmToken на старте, внешний back/ссылки; без androidx (plain
+  Activity) — минимизация зависимостей.
+- PlayzoneMessagingService: onMessageReceived → системное уведомление
+  (BigText, канал playzone_sessions, IMPORTANCE_HIGH, звук+вибрация),
+  onNewToken → регистрация; high-priority data → срабатывает при убитом
+  приложении.
+- PlayzoneNotifications.ensureChannel; ApiClient.registerFcmToken
+  (HttpURLConnection, фоновый поток).
+- Ресурсы: тема Material dark (#0B0B0F), adaptive-icon + PNG mipmaps
+  48..192 (scripts/make-icons.py, PIL), вектор ic_notification (evenOdd).
+- app/build.gradle: google-services подключается ТОЛЬКО при наличии
+  android/app/google-services.json (без него APK собирается, push нет —
+  приложение показывает тост-подсказку). Подпись: playzone.keystore
+  (PKCS12, openssl, alias playzone / PlayZone2024, срок 30 лет) — в
+  приватном репо, чтобы каждая сборка имела одну подпись (обновления
+  «поверх» без удаления).
+- .github/workflows/build-apk.yml: checkout → Java 17 (temurin) →
+  gradle/actions/setup-gradle@v4 (Gradle 8.9) → gradle assembleRelease →
+  артефакт PlayZone-APK. Android Studio не нужен.
+- docs/NATIVE_APK_GUIDE.md: полная инструкция (Firebase-проект,
+  google-services.json в android/app/, 3 env в Vercel, сборка в Actions).
+
+БЕЗОПАСНОСТЬ: FCM-токен бесполезен вне нашего Firebase-проекта; приватный
+ключ сервис-аккаунта — только env Vercel. Пароль keystore в приватном
+репо — приемлемый компромисс (перевыпустить, если репо станет публичным).

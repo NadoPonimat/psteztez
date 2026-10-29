@@ -11,6 +11,7 @@
 
 import { db } from "@/lib/db";
 import { deviceLabel } from "@/lib/crm-types";
+import { fcmConfigured, sendFcmToAll } from "@/lib/fcm";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const webpush = require("web-push");
@@ -92,7 +93,7 @@ async function sendToAll(payload: OverduePayload): Promise<number> {
  * (пока любой экран CRM открыт, уведомления уходят без внешнего cron).
  */
 export async function flushOverduePushes(): Promise<number> {
-  if (!pushConfigured()) return 0;
+  if (!pushConfigured() && !fcmConfigured()) return 0;
 
   const pending = await db.session.findMany({
     where: {
@@ -108,14 +109,15 @@ export async function flushOverduePushes(): Promise<number> {
   let sent = 0;
   for (const s of pending) {
     const label = deviceLabel(s.device.type, s.device.number);
-    const price = `${s.price} ₸`;
-    sent += await sendToAll({
+    const payload = {
       title: "⏰ Время вышло!",
-      body: `${label} · ${s.packageName} · ${price} — сеанс нужно завершить`,
+      body: `${label} · ${s.packageName} · ${s.price} ₸ — сеанс нужно завершить`,
       tag: `overdue-${s.id}`,
       sessionId: s.id,
       url: "/",
-    });
+    };
+    if (pushConfigured()) sent += await sendToAll(payload); // Web Push (TWA/браузер)
+    sent += await sendFcmToAll(payload); // FCM (нативный APK)
     await db.session
       .update({ where: { id: s.id }, data: { pushedAt: new Date() } })
       .catch(() => {});
@@ -125,7 +127,7 @@ export async function flushOverduePushes(): Promise<number> {
 
 /** Дёшево проверить, есть ли сеансы, ждущие push (для горячего пути). */
 export async function hasPendingOverduePushes(): Promise<boolean> {
-  if (!pushConfigured()) return false;
+  if (!pushConfigured() && !fcmConfigured()) return false;
   const count = await db.session.count({
     where: {
       status: "ACTIVE",

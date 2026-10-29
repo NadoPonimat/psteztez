@@ -315,3 +315,15 @@ model PushSubscription {
   lastError String?  // последняя ошибка доставки (для диагностики)
   createdAt DateTime @default(now())
 }
+
+// FCM-токены нативного APK (Firebase Cloud Messaging): уведомления «время
+// вышло» приходят напрямую от Google — со стандартным системным запросом
+// разрешения при первом запуске, даже когда приложение убито из памяти.
+model FcmToken {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique
+  label      String?  // заметка (какое устройство)
+  lastError  String?  // последняя ошибка доставки (для диагностики)
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+}

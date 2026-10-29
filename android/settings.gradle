@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "PlayZone CRM"
-include ":app"
+rootProject.name = "PlayZone"
+include ':app'

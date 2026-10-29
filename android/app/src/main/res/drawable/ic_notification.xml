@@ -1,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- белый геймпад с вырезами (крестовина и кнопки — прозрачные) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M7.5,7.5 h9 a4.5,4.5 0 0 1 0,9 h-9 a4.5,4.5 0 0 1 0,-9 z M7.2,9.6 h1.4 v1.6 h1.6 v1.4 h-1.6 v1.6 h-1.4 v-1.6 h-1.6 v-1.4 h1.6 z M15.2,9.7 a1.1,1.1 0 1 0 0.01,0 a1.1,1.1 0 1 0 -0.01,0 z M17.6,12.2 a1.1,1.1 0 1 0 0.01,0 a1.1,1.1 0 1 0 -0.01,0 z" />
+</vector>

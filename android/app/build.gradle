@@ -1,81 +1,55 @@
 plugins {
-    id "com.android.application"
+    id 'com.android.application'
 }
 
-// Все параметры приходят из переменных окружения (задаёт GitHub Actions workflow).
-def envOr = { String key, String defVal ->
-    def v = System.getenv(key)
-    (v != null && v.trim()) ? v.trim() : defVal
+// google-services подключается только когда в этой папке лежит
+// google-services.json из Firebase Console. Без него APK тоже соберётся
+// (приложение будет работать, но push-уведомления не придут).
+if (file("google-services.json").exists()) {
+    apply plugin: 'com.google.gms.google-services'
 }
-
-def appId       = envOr("APP_ID", "kz.playzone.crm")
-def host        = envOr("PWA_HOST", "crm.example.com")
-def vCode       = envOr("VERSION_CODE", "1").toInteger()
-def vName       = envOr("VERSION_NAME", "1.0")
-def ksPath      = envOr("KEYSTORE_PATH", "keystore/android.keystore")
-def ksPass      = envOr("KEYSTORE_PASSWORD", "")
-def keyPass     = envOr("KEY_PASSWORD", ksPass)
-def ksAlias     = envOr("KEY_ALIAS", "playzone")
-
-// Ключ подписи — относительно корня android/
-def ksFile = rootProject.file(ksPath)
-
-// Первая сборка: ключа нет -> создаём автоматически (30 лет валидности)
-if (!ksFile.exists() && ksPass) {
-    ksFile.parentFile.mkdirs()
-    exec {
-        commandLine "keytool", "-genkeypair",
-                "-keystore", ksFile.absolutePath,
-                "-alias", ksAlias,
-                "-keyalg", "RSA", "-keysize", "2048", "-validity", "10950",
-                "-storepass", ksPass, "-keypass", keyPass,
-                "-dname", "CN=PlayZone CRM, OU=CRM, O=PlayZone, C=KZ"
-    }
-    println ">> Ключ подписи создан: " + ksFile.absolutePath
-}
-
-def hasSigning = ksFile.exists() && ksPass
 
 android {
-    namespace appId
-    compileSdk 36
+    namespace 'com.playzone.crm'
+    compileSdk 34
 
     defaultConfig {
-        applicationId appId
+        applicationId "com.playzone.crm"
         minSdk 24
         targetSdk 34
-        versionCode vCode
-        versionName vName
-        manifestPlaceholders += [host: host]
+        versionCode 1
+        versionName "1.0"
     }
 
     signingConfigs {
         release {
-            if (hasSigning) {
-                storeFile ksFile
-                storePassword ksPass
-                keyAlias ksAlias
-                keyPassword keyPass
-            }
+            storeFile file('playzone.keystore')
+            storeType 'PKCS12'
+            storePassword 'PlayZone2024'
+            keyAlias 'playzone'
+            keyPassword 'PlayZone2024'
         }
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            if (hasSigning) {
-                signingConfig signingConfigs.release
-            }
+            signingConfig signingConfigs.release
         }
     }
 
     lint {
-        checkReleaseBuilds false
         abortOnError false
+        checkReleaseBuilds false
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
 
 dependencies {
-    // Trusted Web Activity: открывает сайт на весь экран без адресной строки
-    implementation "com.google.androidbrowserhelper:androidbrowserhelper:2.7.4"
+    implementation platform('com.google.firebase:firebase-bom:33.1.2')
+    implementation 'com.google.firebase:firebase-messaging'
 }
