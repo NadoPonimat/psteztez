@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Цвет статус-бара (тёмная шапка CRM) -->
+    <color name="themeColor">#18181B</color>
+    <!-- Фон splash-экрана при запуске -->
+    <color name="splashBackground">#09090B</color>
+    <!-- Фон адаптивной иконки -->
+    <color name="icLauncherBackground">#09090B</color>
+</resources>

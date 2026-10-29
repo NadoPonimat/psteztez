@@ -1,0 +1,81 @@
+plugins {
+    id "com.android.application"
+}
+
+// Все параметры приходят из переменных окружения (задаёт GitHub Actions workflow).
+def envOr = { String key, String defVal ->
+    def v = System.getenv(key)
+    (v != null && v.trim()) ? v.trim() : defVal
+}
+
+def appId       = envOr("APP_ID", "kz.playzone.crm")
+def host        = envOr("PWA_HOST", "crm.example.com")
+def vCode       = envOr("VERSION_CODE", "1").toInteger()
+def vName       = envOr("VERSION_NAME", "1.0")
+def ksPath      = envOr("KEYSTORE_PATH", "keystore/android.keystore")
+def ksPass      = envOr("KEYSTORE_PASSWORD", "")
+def keyPass     = envOr("KEY_PASSWORD", ksPass)
+def ksAlias     = envOr("KEY_ALIAS", "playzone")
+
+// Ключ подписи — относительно корня android/
+def ksFile = rootProject.file(ksPath)
+
+// Первая сборка: ключа нет -> создаём автоматически (30 лет валидности)
+if (!ksFile.exists() && ksPass) {
+    ksFile.parentFile.mkdirs()
+    exec {
+        commandLine "keytool", "-genkeypair",
+                "-keystore", ksFile.absolutePath,
+                "-alias", ksAlias,
+                "-keyalg", "RSA", "-keysize", "2048", "-validity", "10950",
+                "-storepass", ksPass, "-keypass", keyPass,
+                "-dname", "CN=PlayZone CRM, OU=CRM, O=PlayZone, C=KZ"
+    }
+    println ">> Ключ подписи создан: " + ksFile.absolutePath
+}
+
+def hasSigning = ksFile.exists() && ksPass
+
+android {
+    namespace appId
+    compileSdk 36
+
+    defaultConfig {
+        applicationId appId
+        minSdk 24
+        targetSdk 34
+        versionCode vCode
+        versionName vName
+        manifestPlaceholders += [host: host]
+    }
+
+    signingConfigs {
+        release {
+            if (hasSigning) {
+                storeFile ksFile
+                storePassword ksPass
+                keyAlias ksAlias
+                keyPassword keyPass
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (hasSigning) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}
+
+dependencies {
+    // Trusted Web Activity: открывает сайт на весь экран без адресной строки
+    implementation "com.google.androidbrowserhelper:androidbrowserhelper:2.7.4"
+}

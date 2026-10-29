@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Этот файл ПЕРЕЗАПИСЫВАЕТСЯ при сборке APK (GitHub Actions подставляет
+  адрес вашего сайта, название приложения и отпечаток ключа подписи).
+  Здесь — значения-заглушки для локальной сборки.
+-->
+<resources>
+    <string name="appName">PlayZone CRM</string>
+    <string name="launchUrl">https://crm.example.com/</string>
+    <string name="assetStatements">[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"web\",\"site\":\"https://crm.example.com\",\"sha256_cert_fingerprints\":[\"00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00\"]}}]</string>
+</resources>

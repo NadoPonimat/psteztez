@@ -1,0 +1,304 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_DIRECT")
+}
+
+// Сотрудники и главный аккаунт
+model User {
+  id           String        @id @default(cuid())
+  username     String        @unique
+  passwordHash String
+  name         String
+  role         String        @default("STAFF") // ADMIN | STAFF
+  active       Boolean       @default(true)
+  // Условия оплаты труда (задаёт главный аккаунт)
+  dailyRate    Float         @default(0) // ставка за рабочий день, ₸
+  bonusPercent Float         @default(0) // +% от кассы за день
+  bonusThreshold Float       @default(0) // порог кассы за день, ₸
+  // Оформление (каждый аккаунт выбирает сам)
+  theme        String        @default("") // id темы из lib/themes.ts ("" = стандартная)
+  alarmSound   String        @default("siren") // id звука из lib/sounds.ts
+  phone        String?       // рабочий телефон для связи (звонок / WhatsApp)
+  createdAt    DateTime      @default(now())
+  authSessions AuthSession[]
+  workDays     WorkDay[]
+  shifts       Shift[]
+  cashEntries  CashEntry[]
+  expenses     Expense[]
+  startedSessions  Session[] @relation("StartedSessions")
+  completedSessions Session[] @relation("CompletedSessions")
+  tournaments      Tournament[] @relation("TournamentCreators")
+}
+
+// График работы: отмеченные рабочие дни сотрудника
+model WorkDay {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day    String // YYYY-MM-DD
+  @@unique([userId, day])
+}
+
+// График смен: день можно разбить на 2 смены (у каждой свой сотрудник и часы)
+// или назначить одного сотрудника на весь день
+model Shift {
+  id        String  @id @default(cuid())
+  day       String // YYYY-MM-DD
+  slot      Int // 1 = первая смена, 2 = вторая (при isFullDay всегда 1)
+  isFullDay Boolean @default(false) // true = сотрудник на весь день
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  startsAt  String // "HH:MM"
+  endsAt    String // "HH:MM" (меньше startsAt = смена через полночь)
+  @@unique([day, slot])
+}
+
+// Cookie-сессии авторизации
+model AuthSession {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+// Устройства: PlayStation и VR кресла
+model Device {
+  id       Int       @id @default(autoincrement())
+  type     String // PLAYSTATION | VR
+  number   Int
+  active   Boolean   @default(true)
+  sessions Session[]
+  @@unique([type, number])
+}
+
+// Пакеты времени (1 час, полчаса и т.д.) с ценой
+model Package {
+  id              Int       @id @default(autoincrement())
+  name            String // "1 час", "30 минут"
+  durationMinutes Int
+  price           Int // в тенге
+  deviceType      String? // null = для всех типов устройств
+  active          Boolean   @default(true)
+  sortOrder       Int       @default(0)
+  sessions        Session[]
+}
+
+// Сеанс аренды
+model Session {
+  id              Int       @id @default(autoincrement())
+  deviceId        Int
+  device          Device    @relation(fields: [deviceId], references: [id])
+  packageId       Int?
+  package         Package?  @relation(fields: [packageId], references: [id])
+  vrGameId        Int?
+  vrGame          VrGame?   @relation(fields: [vrGameId], references: [id])
+  customerId      Int?
+  customer        Customer? @relation(fields: [customerId], references: [id])
+  packageName     String // снимок названия пакета / VR-игры
+  durationMinutes Int
+  startedAt       DateTime  @default(now())
+  plannedEndAt    DateTime
+  endedAt         DateTime?
+  price           Int // полная стоимость в тенге
+  paymentMethod   String // CASH | KASPI | MIXED
+  cashAmount      Int       @default(0)
+  kaspiAmount     Int       @default(0)
+  status          String    @default("ACTIVE") // ACTIVE | COMPLETED
+  notified        Boolean   @default(false) // прозвучало ли уведомление
+  createdById     String
+  createdBy       User      @relation("StartedSessions", fields: [createdById], references: [id])
+  completedById   String?
+  completedBy     User?     @relation("CompletedSessions", fields: [completedById], references: [id])
+  note            String?
+  // Скидка (акция и/или постоянный клиент)
+  originalPrice   Int?      // цена до скидки
+  discountLabel   String?   // например «Счастливые часы −20%» или «Постоянный клиент −10%»
+  cashEntries     CashEntry[]
+
+  @@index([startedAt])
+  @@index([status, startedAt])
+}
+
+// Журнал кассы: утреннее открытие (пересчёт), оплаты сеансов (сразу при старте
+// таймера), авансы сотрудникам (наличными из кассы или переводом Каспи).
+// Балансы = Σ cashPart (касса наличных) и Σ kaspiPart (касса Каспи) по всем записям.
+model CashEntry {
+  id        Int      @id @default(autoincrement())
+  kind      String // OPENING_CASH | OPENING_KASPI | SALE | ADVANCE_CASH | ADVANCE_KASPI
+  amount    Int // сумма записи, ₸ (всегда >= 0)
+  cashPart  Int      @default(0) // влияние на кассу наличных: +приход / -расход / 0
+  kaspiPart Int      @default(0) // влияние на кассу Каспи
+  note      String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  sessionId Int?
+  session   Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  expense   Expense?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([kind, createdAt])
+}
+
+// Расходы клуба: шнуры, ремонт, химия и т.п. source:
+//   CASH    — оплачено из кассы наличных (касса уменьшается сразу)
+//   POCKET  — оплачено из своего кармана (кассу не трогаем)
+model Expense {
+  id          Int       @id @default(autoincrement())
+  name        String // «Шнуры для зарядки джойстиков»
+  amount      Int       // сумма расхода, ₸
+  source      String    // CASH | POCKET
+  note        String?
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  cashEntryId Int?      @unique // запись кассы (только для source = CASH)
+  cashEntry   CashEntry? @relation(fields: [cashEntryId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+}
+
+// Акции и скидки: действуют в дни недели (days: "1,2,5", 0=Вс) с timeFrom
+// до timeTo ("HH:MM", timeTo <= timeFrom = через полночь), на устройства
+// (deviceType: null = все). Применяются автоматически при старте сеанса.
+model Promo {
+  id            Int     @id @default(autoincrement())
+  name          String // «Счастливые часы»
+  discountType  String  // PERCENT | FIXED
+  discountValue Int // % или ₸
+  timeFrom      String  // "HH:MM"
+  timeTo        String  // "HH:MM"
+  days          String // CSV дней недели, 0=Вс .. 6=Сб
+  deviceType    String? // PLAYSTATION | VR | null = все устройства
+  active        Boolean @default(true)
+  createdAt     DateTime @default(now())
+}
+
+// Постоянные клиенты: главный задаёт персональную скидку — «свои цены».
+// Сотрудник выбирает клиента при старте сеанса, скидка применяется сама.
+model Customer {
+  id              Int     @id @default(autoincrement())
+  name            String // «Ерасыл» / «Абонемент №3»
+  phone           String? // для звонка / WhatsApp
+  discountPercent Float   @default(0) // персональная скидка, % (0–100)
+  note            String? // примечание («брат владельца», «абонемент»)
+  active          Boolean @default(true)
+  createdAt       DateTime @default(now())
+  sessions        Session[]
+
+  @@index([active])
+}
+
+// Каталог VR-игр: номер, описание, длительность, возрастное ограничение и цена.
+// Кроме игр доступен «свободный запуск» — обычные пакеты времени.
+model VrGame {
+  id              Int     @id @default(autoincrement())
+  number          Int     @default(0) // номер игры на стенде («№26»), 0 = без номера
+  name            String // «Beat Saber»
+  description     String  @default("") // «американские горки, ночью, хоррор»
+  durationMinutes Int // длительность сессии игры
+  minAge          Int     @default(0) // возрастное ограничение (0 = без ограничения)
+  price           Int // цена, ₸
+  active          Boolean @default(true)
+  sortOrder       Int     @default(0)
+  sessions        Session[]
+}
+
+// ==== Турниры ====
+
+// Каталог игр для турниров: MK, UFC, EA FC (FIFA) и т.д.
+model TournamentGame {
+  id          Int          @id @default(autoincrement())
+  name        String // «Mortal Kombat 1»
+  genre       String       @default("") // «Драки 1×1», «Футбол», «Гонки»
+  active      Boolean      @default(true)
+  sortOrder   Int          @default(0)
+  tournaments Tournament[]
+}
+
+// Турнир по игре: олимпийская система, двухсеточная или круговая.
+model Tournament {
+  id            Int       @id @default(autoincrement())
+  name          String // «Кубок PlayZone по Mortal Kombat»
+  gameId        Int
+  game          TournamentGame @relation(fields: [gameId], references: [id])
+  format        String // SINGLE_ELIM | DOUBLE_ELIM | ROUND_ROBIN
+  bestOf        Int       @default(1) // 1 | 3 | 5 — матчи до N побед
+  entryFee      Int       @default(0) // взнос с участника, ₸
+  prizeFund     Int       @default(0) // призовой фонд, ₸
+  prizeSplit    String    @default("60,30,10") // % по местам (1-е, 2-е, 3-е)
+  thirdPlace    Boolean   @default(false) // матч за 3-е место (олимпийская)
+  maxParticipants Int     @default(16)
+  status        String    @default("REGISTRATION") // REGISTRATION | ONGOING | COMPLETED
+  startsAt      DateTime? // плановое время начала
+  championName  String? // имя чемпиона (после завершения)
+  createdById   String
+  createdBy     User      @relation("TournamentCreators", fields: [createdById], references: [id])
+  participants  TournamentParticipant[]
+  matches       TournamentMatch[]
+  createdAt     DateTime  @default(now())
+
+  @@index([status, createdAt])
+}
+
+// Участник турнира: игрок клуба по имени/нику.
+model TournamentParticipant {
+  id           Int         @id @default(autoincrement())
+  tournamentId Int
+  tournament   Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  name         String // имя или ник
+  phone        String? // контакт для связи
+  paid         Boolean     @default(false) // взнос оплачен
+  seed         Int         @default(0) // посев (1 = фаворит), 0 = не посеян
+  points       Int         @default(0) // очки круговой системы
+  wins         Int         @default(0)
+  draws        Int         @default(0)
+  losses       Int         @default(0)
+  diff         Int         @default(0) // разница счёта (для круговой)
+  eliminated   Boolean     @default(false)
+  place        Int? // итоговое место (1, 2, 3...)
+  createdAt    DateTime    @default(now())
+
+  @@index([tournamentId])
+}
+
+// Матч турнира. Для сеток: победитель идёт в nextMatch/slot, проигравший
+// верхней сетки — в losersMatch/slot (двухсеточная). RR — каждый с каждым.
+model TournamentMatch {
+  id            Int        @id @default(autoincrement())
+  tournamentId  Int
+  tournament    Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  bracket       String     @default("UPPER") // UPPER | LOWER | GF | GF_RESET | THIRD | RR
+  round         Int        @default(1) // 1 = первый раунд (сверху вниз по сетке)
+  matchIndex    Int        @default(0) // номер матча в раунде
+  p1Id          Int?
+  p1Name        String? // снимок имени на момент попадания в матч
+  p2Id          Int?
+  p2Name        String?
+  score1        Int?
+  score2        Int?
+  winnerId      Int?
+  status        String     @default("PENDING") // PENDING | READY | DONE
+  nextMatchId   Int? // куда идёт победитель
+  nextSlot      Int? // 1 | 2 — в какой слот
+  losersMatchId Int? // куда идёт проигравший (верхняя сетка)
+  losersSlot    Int?
+  dead1         Boolean @default(false) // слот 1 никогда не заполнится (бай соперника)
+  dead2         Boolean @default(false) // слот 2 никогда не заполнится
+  createdAt     DateTime   @default(now())
+
+  @@index([tournamentId])
+  @@index([nextMatchId])
+  @@index([losersMatchId])
+}
+
+// Настройки приложения (пароль завершения и т.п.)
+model Setting {
+  key   String @id
+  value String
+}
