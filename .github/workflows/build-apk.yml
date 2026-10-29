@@ -43,6 +43,8 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     env:
       APP_ID: ${{ github.event.inputs.app_id }}
       APP_NAME: ${{ github.event.inputs.app_name }}
@@ -186,9 +188,13 @@ jobs:
           cp android/keystore/android.keystore apk-artifacts/android.keystore
           ls -la apk-artifacts/
 
-      - name: Upload PlayZone-APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: PlayZone-APK
-          path: apk-artifacts/
-          if-no-files-found: error
+      - name: Publish APK as GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="apk-${{ github.run_number }}"
+          gh release create "$TAG" apk-artifacts/PlayZone-CRM.apk apk-artifacts/assetlinks.json apk-artifacts/android.keystore \
+            --repo "${{ github.repository }}" \
+            --title "Android APK #${{ github.run_number }}" \
+            --notes "Готовый APK: скачайте PlayZone-CRM.apk и установите на телефон."
+          echo "Готово: Releases → $TAG"
