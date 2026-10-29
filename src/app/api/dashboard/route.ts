@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { flushOverduePushes, hasPendingOverduePushes } from "@/lib/push";
 
 export async function GET() {
   const auth = await requireUser();
   if (!auth.ok) return auth.response;
   const { user } = auth;
+
+  // Попутная доставка push «время вышло»: пока CRM открыта хоть на одном
+  // устройстве, уведомления на телефоны уходят сразу (без внешнего cron).
+  // Дёшево: сначала один count-запрос, рассылка только если есть что слать.
+  if (await hasPendingOverduePushes()) {
+    await flushOverduePushes().catch(() => {});
+  }
 
   const [devices, packages, promos, customers, vrGames, clubName] = await Promise.all([
     db.device.findMany({

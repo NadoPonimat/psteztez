@@ -22,6 +22,7 @@ import { ContactsButton } from "./contacts-dialog";
 import { TournamentsView } from "./tournaments-view";
 import { applyTheme } from "@/lib/themes";
 import { unlockAudio } from "@/lib/alarm";
+import { ensurePushSubscribed } from "@/lib/push-client";
 import {
   flushOutbox,
   getPendingSnapshot,
@@ -98,7 +99,7 @@ export function AppShell({
       if (!res.ok) throw new Error("Ошибка загрузки");
       return res.json();
     },
-    refetchInterval: 5000,
+    refetchInterval: 10000, // 10 с: таймеры тикают локально, запас по лимитам бесплатного хостинга
   });
 
   // Синхронизация времени с сервером + тик каждую секунду
@@ -171,6 +172,26 @@ export function AppShell({
         onToast(`Синхронизация: ${r.failed} опер. отклонено сервером${r.error ? ` — ${r.error}` : ""}`);
       }
     });
+  }, [queryClient]);
+
+  // Тихо подписать это устройство на push, если разрешение уже выдано —
+  // чтобы уведомления «время вышло» заработали сами, без кнопки в меню
+  useEffect(() => {
+    void ensurePushSubscribed();
+  }, []);
+
+  // Push/события service worker: пока приложение видно, сервер шлёт нам
+  // сообщение вместо системного уведомления — обновляем данные, сирену
+  // включит AlarmCenter (сеанс всё ещё overdue); клик по уведомлению — тоже сюда
+  useEffect(() => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === "push-overdue" || e.data?.type === "push-open") {
+        void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", handler);
+    return () => navigator.serviceWorker.removeEventListener("message", handler);
   }, [queryClient]);
 
   function openStart(device: DeviceWithSession) {

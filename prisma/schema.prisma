@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DATABASE_URL_DIRECT")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // Сотрудники и главный аккаунт
@@ -112,6 +111,8 @@ model Session {
   kaspiAmount     Int       @default(0)
   status          String    @default("ACTIVE") // ACTIVE | COMPLETED
   notified        Boolean   @default(false) // прозвучало ли уведомление
+  pushedAt        DateTime? // когда сервер отправил push «время вышло» (чтобы не слать повторно;
+                            // в отличие от notified диалог в приложении продолжает показываться)
   createdById     String
   createdBy       User      @relation("StartedSessions", fields: [createdById], references: [id])
   completedById   String?
@@ -301,4 +302,16 @@ model TournamentMatch {
 model Setting {
   key   String @id
   value String
+}
+
+// Push-подписки устройств (Web Push / VAPID): доставляют «время вышло»
+// даже когда приложение свёрнуто или закрыто. Одна строка = один браузер/APK.
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  endpoint  String   @unique // URL push-сервиса (fcm.googleapis.com и т.п.)
+  p256dh    String   // ключи шифрования из подписки
+  auth      String
+  label     String?  // заметка (какое это устройство/сотрудник)
+  lastError String?  // последняя ошибка доставки (для диагностики)
+  createdAt DateTime @default(now())
 }
