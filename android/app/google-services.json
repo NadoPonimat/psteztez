@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1037282516068",
+    "project_id": "playzone-71452",
+    "storage_bucket": "playzone-71452.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1037282516068:android:36908e742d046061b49371",
+        "android_client_info": {
+          "package_name": "com.playzone.crm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDziMW3kcP1biLy9dFx2GS2w5RMY4KUb1g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
