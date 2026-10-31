@@ -38,16 +38,17 @@ object AlarmScheduler {
      * обновлении данных: новые сеансы добавляются, завершённые и
      * продлённые — отменяются. Если ничего не изменилось, ничего не делаем.
      */
-    fun replaceAll(context: Context, items: List<AlarmItem>) {
-        val am = alarmManager(context) ?: return
+    fun replaceAll(context: Context, items: List<AlarmItem>): Int {
+        val am = alarmManager(context) ?: return -1
         val fresh = items.filter { it.triggerAt > System.currentTimeMillis() + MIN_LEAD_MS }
         val json = toJson(fresh)
         val prefs = prefs(context)
-        if (json == prefs.getString(KEY, null)) return // ничего не изменилось
+        if (json == prefs.getString(KEY, null)) return -1 // ничего не изменилось
 
         for (old in fromJson(prefs.getString(KEY, null))) cancelOne(context, am, old)
         for (item in fresh) scheduleOne(context, am, item)
         prefs.edit().putString(KEY, json).apply()
+        return fresh.size
     }
 
     /** После перезагрузки телефона Android стирает все будильники — ставим заново. */
