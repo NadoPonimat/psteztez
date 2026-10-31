@@ -226,8 +226,8 @@ button{background:#6366f1;color:#fff;border:none;border-radius:12px;padding:14px
     }
 
     companion object {
-        private const val START_URL = "https://psteztez.vercel.app/"
-        private const val START_URL_PREFIX = "https://psteztez.vercel.app"
+        private const val START_URL = "file:///android_asset/index.html"
+        private const val START_URL_PREFIX = "file:///android_asset"
         private const val REQ_NOTIFICATIONS = 1001
     }
 }
