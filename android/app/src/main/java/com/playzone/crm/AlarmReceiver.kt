@@ -48,16 +48,22 @@ class AlarmReceiver : BroadcastReceiver() {
             .setCategory(Notification.CATEGORY_ALARM)
             .setAutoCancel(true)
             .setContentIntent(contentIntent)
+            // Открыть приложение на весь экран поверх блокировки, как будильник
+            .setFullScreenIntent(contentIntent, true)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
 
         val nm =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
                 ?: return
+        val notification = builder.build()
+        // Звук повторяется, пока уведомление не закрыли (как у будильника)
+        notification.flags = notification.flags or Notification.FLAG_INSISTENT
         if (tag.isNotEmpty()) {
             // тот же tag, что у FCM: кто первый сработал — тот и покажет,
             // второе уведомление заменит первое, дубликата не будет
-            nm.notify(tag, 0, builder.build())
+            nm.notify(tag, 0, notification)
         } else {
-            nm.notify(0, builder.build())
+            nm.notify(0, notification)
         }
     }
 
