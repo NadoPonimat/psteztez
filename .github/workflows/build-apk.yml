@@ -1,200 +1,37 @@
-# Сборка APK (Android) для PlayZone CRM — Trusted Web Activity.
-#
-# Схема: в репозитории лежит готовый android/ проект (TWA-обёртка над сайтом),
-# workflow подставляет ваш HTTPS-адрес, название, packageId, подписывает APK
-# вашим ключом и выкладывает артефакт: APK + assetlinks.json + ключ подписи.
-#
-# Как пользоваться (подробно — в docs/APK_GUIDE.md):
-# 1. Разверните CRM по HTTPS (VPS + Caddy / Cloudflare Tunnel).
-# 2. Settings → Secrets and variables → Actions → New repository secret:
-#      ANDROID_KEYSTORE_PASSWORD  — пароль ключа подписи (придумайте, 8+ символов)
-#      ANDROID_KEY_ALIAS_PASSWORD — тот же пароль
-# 3. Вкладка Actions → «Build Android APK» → Run workflow → введите ваш
-#    HTTPS-адрес → Run workflow → через ~5 минут скачайте артефакт PlayZone-APK.
-# 4. (Рекомендуется после первой сборки) сохраните ключ навсегда:
-#    скачайте android.keystore из артефакта и загрузите его base64 в секрет
-#    ANDROID_KEYSTORE_BASE64 — тогда все будущие сборки подписываются тем же ключом.
-#
-# Версия приложения (versionCode) растёт автоматически с каждым запуском,
-# поэтому обновление ставится поверх старой версии без удаления.
-
-name: Build Android APK
+name: Build APK
 
 on:
   workflow_dispatch:
-    inputs:
-      pwa_url:
-        description: "HTTPS-адрес CRM, например https://crm.example.com"
-        required: true
-        default: "https://crm.example.com"
-      app_name:
-        description: "Название приложения на телефоне"
-        required: true
-        default: "PlayZone CRM"
-      app_id:
-        description: "Идентификатор пакета (латиница, точки)"
-        required: true
-        default: "kz.playzone.crm"
-      version_code:
-        description: "Номер версии (пусто = номер запуска, авто-рост)"
-        required: false
-        default: ""
+  push:
+    paths:
+      - "android/**"
+      - ".github/workflows/build-apk.yml"
 
 jobs:
-  build-apk:
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    env:
-      APP_ID: ${{ github.event.inputs.app_id }}
-      APP_NAME: ${{ github.event.inputs.app_name }}
-      VERSION_CODE: ${{ github.event.inputs.version_code != '' && github.event.inputs.version_code || github.run_number }}
-      VERSION_NAME: 1.${{ github.run_number }}.0
-      KEYSTORE_PATH: keystore/android.keystore
-      KEY_ALIAS: playzone
-      KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-      KEY_PASSWORD: ${{ secrets.ANDROID_KEY_ALIAS_PASSWORD }}
+  build:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Загрузка репозитория
         uses: actions/checkout@v4
 
-      - name: Derive host from URL
-        run: |
-          H="${{ github.event.inputs.pwa_url }}"
-          H="${H#https://}"; H="${H#http://}"; H="${H%%/*}"
-          echo "PWA_HOST=$H" >> "$GITHUB_ENV"
-          echo "Сайт приложения: https://$H"
-
-      - name: (Необязательно) предупреждение, если сайт недоступен
-        run: |
-          curl -fsSL --max-time 20 "${{ github.event.inputs.pwa_url }}/manifest.json" -o /dev/null \
-            || echo "::warning::Сайт недоступен из GitHub. APK всё равно соберётся, но приложение откроется только когда сайт заработает."
-
-      - name: Restore signing key from cache
-        uses: actions/cache@v4
-        with:
-          path: android/keystore
-          key: android-keystore-v1
-
-      - name: Restore signing key from secret (приоритет над кэшем)
-        env:
-          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          if [ -n "$KS_B64" ]; then
-            mkdir -p android/keystore
-            printf '%s' "$KS_B64" | tr -d '\n\r' | base64 -d > android/keystore/android.keystore
-            echo "Ключ подписи восстановлен из секрета ANDROID_KEYSTORE_BASE64"
-          fi
-
-      - name: Check signing secrets are set
-        run: |
-          if [ -z "$KEYSTORE_PASSWORD" ]; then
-            echo "::error::Не задан секрет ANDROID_KEYSTORE_PASSWORD. Откройте Settings → Secrets and variables → Actions → New repository secret и добавьте его (пароль придумайте любой, 8+ символов)."
-            exit 1
-          fi
-
-      - name: Setup JDK 17
+      - name: Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Gradle 8.11.1
+      - name: Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.11.1"
+          gradle-version: "8.9"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Сборка APK
+        working-directory: android
+        run: gradle assembleRelease --no-daemon
+
+      - name: APK в артефакты
+        uses: actions/upload-artifact@v4
         with:
-          packages: 'platform-tools platforms;android-36'
-
-      - name: Create signing key (только первая сборка)
-        working-directory: android
-        run: |
-          mkdir -p "$(dirname "$KEYSTORE_PATH")"
-          if [ ! -f "$KEYSTORE_PATH" ]; then
-            keytool -genkeypair \
-              -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" \
-              -keyalg RSA -keysize 2048 -validity 10950 \
-              -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" \
-              -dname "CN=PlayZone CRM, OU=CRM, O=PlayZone, C=KZ"
-            echo "Создан новый ключ подписи. Сохраните его: он в артефакте (android.keystore)."
-          else
-            echo "Использую существующий ключ подписи."
-          fi
-
-      - name: Compute certificate SHA-256
-        id: cert
-        working-directory: android
-        run: |
-          SHA=$(keytool -list -v -keystore "$KEYSTORE_PATH" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" 2>/dev/null \
-            | grep -oP 'SHA256:\s*\K[A-F0-9:]+' | head -1 | tr -d ':' | tr 'A-F' 'a-f')
-          if [ -z "$SHA" ]; then
-            echo "::error::Не удалось прочитать отпечаток ключа — проверьте пароли секретов."
-            exit 1
-          fi
-          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
-          echo "Отпечаток сертификата (SHA-256): $SHA"
-
-      - name: Write app config (адрес, название, отпечаток)
-        working-directory: android
-        run: |
-          python3 - <<'PY'
-          import os
-          host = os.environ["PWA_HOST"].strip().rstrip("/")
-          name = os.environ["APP_NAME"].replace("&", "&amp;").replace("<", "&lt;")
-          sha = "${{ steps.cert.outputs.sha256 }}"
-          template = r'''<?xml version="1.0" encoding="utf-8"?>
-          <!-- Сгенерировано автоматически при сборке APK -->
-          <resources>
-              <string name="appName">__NAME__</string>
-              <string name="launchUrl">https://__HOST__/</string>
-              <string name="assetStatements">[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"web","site":"https://__HOST__","sha256_cert_fingerprints":["__SHA__"]}}]</string>
-          </resources>
-          '''
-          cfg = template.replace("__NAME__", name).replace("__HOST__", host).replace("__SHA__", sha)
-          with open("app/src/main/res/values/config.xml", "w", encoding="utf-8") as f:
-              f.write(cfg)
-          print(cfg)
-          PY
-
-      - name: Build signed APK
-        working-directory: android
-        run: gradle :app:assembleRelease --no-daemon
-
-      - name: Prepare artifacts (APK + assetlinks + ключ)
-        run: |
-          mkdir -p apk-artifacts
-          cp android/app/build/outputs/apk/release/app-release.apk apk-artifacts/PlayZone-CRM.apk
-          python3 - <<'PY'
-          import json, os
-          host = os.environ["PWA_HOST"].strip().rstrip("/")
-          sha = "${{ steps.cert.outputs.sha256 }}"
-          assetlinks = [
-              {
-                  "relation": ["delegate_permission/common.handle_all_urls"],
-                  "target": {
-                      "namespace": "android_app",
-                      "package_name": os.environ["APP_ID"],
-                      "sha256_cert_fingerprints": [sha],
-                  },
-              }
-          ]
-          with open("apk-artifacts/assetlinks.json", "w", encoding="utf-8") as f:
-              json.dump(assetlinks, f, indent=2)
-          print(open("apk-artifacts/assetlinks.json").read())
-          PY
-          cp android/keystore/android.keystore apk-artifacts/android.keystore
-          ls -la apk-artifacts/
-
-      - name: Publish APK as GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          TAG="apk-${{ github.run_number }}"
-          gh release create "$TAG" apk-artifacts/PlayZone-CRM.apk apk-artifacts/assetlinks.json apk-artifacts/android.keystore \
-            --repo "${{ github.repository }}" \
-            --title "Android APK #${{ github.run_number }}" \
-            --notes "Готовый APK: скачайте PlayZone-CRM.apk и установите на телефон."
-          echo "Готово: Releases → $TAG"
+          name: PlayZone-APK
+          path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
