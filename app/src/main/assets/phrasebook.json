@@ -1,0 +1,551 @@
+{
+ "presets": [
+  {
+   "name": "Фитнес-клуб: ресепшн",
+   "roles": [
+    "Я",
+    "Клиент"
+   ],
+   "lines": [
+    [
+     0,
+     "Здравствуйте! Чем могу помочь?",
+     "Hi! How can I help you?"
+    ],
+    [
+     1,
+     "Здравствуйте, сколько стоит абонемент?",
+     "Hi, how much is a membership?"
+    ],
+    [
+     0,
+     "Какой абонемент вас интересует: на месяц, на три месяца или на год?",
+     "Which membership are you interested in: one month, three months, or a year?"
+    ],
+    [
+     1,
+     "На месяц. Что в него входит?",
+     "One month. What does it include?"
+    ],
+    [
+     0,
+     "Тренажёрный зал, групповые занятия и сауна.",
+     "The gym, group classes, and the sauna."
+    ],
+    [
+     0,
+     "Хотите пробное занятие?",
+     "Would you like a trial session?"
+    ],
+    [
+     1,
+     "Во сколько вы открываетесь и закрываетесь?",
+     "What time do you open and close?"
+    ],
+    [
+     0,
+     "Мы работаем с семи утра до одиннадцати вечера.",
+     "We’re open from 7 a.m. to 11 p.m."
+    ],
+    [
+     1,
+     "Вода в кулере бесплатная или платная?",
+     "Is the water in the cooler free, or do I have to pay for it?"
+    ],
+    [
+     0,
+     "Вода в кулере бесплатная, бутилированная вода продаётся в баре.",
+     "The water in the cooler is free. Bottled water is sold at the bar."
+    ],
+    [
+     1,
+     "Где раздевалка?",
+     "Where is the locker room?"
+    ],
+    [
+     0,
+     "Прямо и направо. Вот ваш ключ от шкафчика.",
+     "Straight ahead and to the right. Here’s your locker key."
+    ],
+    [
+     0,
+     "Вам что-нибудь подсказать?",
+     "Can I help you with anything else?"
+    ],
+    [
+     1,
+     "Нет, спасибо.",
+     "No, thank you."
+    ],
+    [
+     0,
+     "Хорошей тренировки!",
+     "Have a great workout!"
+    ]
+   ]
+  },
+  {
+   "name": "Фитнес-бар",
+   "roles": [
+    "Я",
+    "Клиент"
+   ],
+   "lines": [
+    [
+     0,
+     "Добрый вечер! Что будете?",
+     "Good evening! What can I get you?"
+    ],
+    [
+     1,
+     "Можно протеиновый коктейль с бананом?",
+     "Can I get a protein shake with banana?"
+    ],
+    [
+     0,
+     "Конечно. Большой или маленький?",
+     "Sure. Large or small?"
+    ],
+    [
+     1,
+     "Большой. На молоке или на воде?",
+     "Large. Is it made with milk or water?"
+    ],
+    [
+     0,
+     "Как хотите — можно на молоке, на воде или на миндальном молоке.",
+     "With milk, water, or almond milk — whatever you like."
+    ],
+    [
+     1,
+     "Сколько в нём белка?",
+     "How much protein is in it?"
+    ],
+    [
+     0,
+     "Около тридцати граммов.",
+     "About thirty grams."
+    ],
+    [
+     0,
+     "С вас тысяча пятьсот тенге. Картой или наличными?",
+     "That’ll be fifteen hundred tenge. Card or cash?"
+    ],
+    [
+     1,
+     "Картой, пожалуйста.",
+     "Card, please."
+    ],
+    [
+     0,
+     "Приложите карту, пожалуйста.",
+     "Please tap your card."
+    ],
+    [
+     0,
+     "Ваш коктейль будет готов через пару минут.",
+     "Your shake will be ready in a couple of minutes."
+    ],
+    [
+     1,
+     "Спасибо!",
+     "Thank you!"
+    ],
+    [
+     0,
+     "Пожалуйста, приходите ещё!",
+     "You’re welcome. Come again!"
+    ]
+   ]
+  },
+  {
+   "name": "Магазин",
+   "roles": [
+    "Я",
+    "Продавец"
+   ],
+   "lines": [
+    [
+     1,
+     "Здравствуйте! Вам помочь?",
+     "Hi! Can I help you?"
+    ],
+    [
+     0,
+     "Да, я ищу кроссовки для бега.",
+     "Yes, I’m looking for running shoes."
+    ],
+    [
+     1,
+     "Какой у вас размер?",
+     "What size are you?"
+    ],
+    [
+     0,
+     "Сорок третий.",
+     "Size forty-three."
+    ],
+    [
+     0,
+     "Можно примерить?",
+     "Can I try them on?"
+    ],
+    [
+     1,
+     "Конечно, примерочная там.",
+     "Of course. The fitting room is over there."
+    ],
+    [
+     0,
+     "Они немного маловаты. Есть на размер больше?",
+     "They’re a bit small. Do you have them in a size up?"
+    ],
+    [
+     1,
+     "Сейчас посмотрю на складе.",
+     "Let me check in the back."
+    ],
+    [
+     0,
+     "Сколько они стоят?",
+     "How much are they?"
+    ],
+    [
+     0,
+     "Есть скидка?",
+     "Is there a discount?"
+    ],
+    [
+     1,
+     "Сегодня скидка десять процентов.",
+     "There’s ten percent off today."
+    ],
+    [
+     0,
+     "Хорошо, я возьму.",
+     "OK, I’ll take them."
+    ],
+    [
+     1,
+     "Пакет нужен?",
+     "Do you need a bag?"
+    ],
+    [
+     0,
+     "Нет, спасибо. Можно чек?",
+     "No, thanks. Can I have the receipt?"
+    ]
+   ]
+  },
+  {
+   "name": "Кафе и ресторан",
+   "roles": [
+    "Я",
+    "Официант"
+   ],
+   "lines": [
+    [
+     0,
+     "Столик на двоих, пожалуйста.",
+     "A table for two, please."
+    ],
+    [
+     1,
+     "Пожалуйста, проходите. Вот меню.",
+     "Please come in. Here is the menu."
+    ],
+    [
+     0,
+     "Что вы посоветуете?",
+     "What would you recommend?"
+    ],
+    [
+     1,
+     "Сегодня у нас хороший стейк.",
+     "The steak is very good today."
+    ],
+    [
+     0,
+     "Мне стейк средней прожарки и салат.",
+     "I’ll have the steak, medium, and a salad."
+    ],
+    [
+     0,
+     "В этом блюде есть орехи?",
+     "Does this dish have nuts in it?"
+    ],
+    [
+     1,
+     "Что будете пить?",
+     "What would you like to drink?"
+    ],
+    [
+     0,
+     "Воду без газа, пожалуйста.",
+     "Still water, please."
+    ],
+    [
+     0,
+     "Извините, можно ещё салфетки?",
+     "Excuse me, could I have some more napkins?"
+    ],
+    [
+     0,
+     "Счёт, пожалуйста.",
+     "Could I have the bill, please?"
+    ],
+    [
+     0,
+     "Можно оплатить картой?",
+     "Can I pay by card?"
+    ],
+    [
+     1,
+     "Конечно. Всё понравилось?",
+     "Of course. Did you enjoy your meal?"
+    ],
+    [
+     0,
+     "Да, всё было очень вкусно, спасибо.",
+     "Yes, everything was delicious. Thank you."
+    ]
+   ]
+  },
+  {
+   "name": "Такси",
+   "roles": [
+    "Я",
+    "Водитель"
+   ],
+   "lines": [
+    [
+     1,
+     "Здравствуйте! Куда едем?",
+     "Hi! Where to?"
+    ],
+    [
+     0,
+     "В аэропорт, пожалуйста.",
+     "To the airport, please."
+    ],
+    [
+     0,
+     "Сколько примерно ехать?",
+     "About how long will it take?"
+    ],
+    [
+     1,
+     "Минут сорок, если не будет пробок.",
+     "About forty minutes if there is no traffic."
+    ],
+    [
+     0,
+     "Можно включить кондиционер?",
+     "Could you turn on the air conditioning?"
+    ],
+    [
+     0,
+     "Остановите здесь, пожалуйста.",
+     "Please stop here."
+    ],
+    [
+     0,
+     "Подождите меня пять минут.",
+     "Please wait for me for five minutes."
+    ],
+    [
+     0,
+     "Сколько с меня?",
+     "How much do I owe you?"
+    ],
+    [
+     0,
+     "Сдачи не надо.",
+     "Keep the change."
+    ]
+   ]
+  },
+  {
+   "name": "Аэропорт и отель",
+   "roles": [
+    "Я",
+    "Сотрудник"
+   ],
+   "lines": [
+    [
+     1,
+     "Ваш паспорт, пожалуйста.",
+     "Your passport, please."
+    ],
+    [
+     0,
+     "Вот, пожалуйста.",
+     "Here you are."
+    ],
+    [
+     1,
+     "Сколько у вас мест багажа?",
+     "How many bags are you checking in?"
+    ],
+    [
+     0,
+     "Одна сумка и ручная кладь.",
+     "One suitcase and a carry-on."
+    ],
+    [
+     0,
+     "Можно место у окна?",
+     "Could I have a window seat?"
+    ],
+    [
+     0,
+     "Где выход номер пять?",
+     "Where is gate five?"
+    ],
+    [
+     0,
+     "У меня забронирован номер на имя Бектас.",
+     "I have a reservation under the name Bektas."
+    ],
+    [
+     1,
+     "На сколько ночей?",
+     "For how many nights?"
+    ],
+    [
+     0,
+     "На три ночи.",
+     "For three nights."
+    ],
+    [
+     0,
+     "Завтрак включён?",
+     "Is breakfast included?"
+    ],
+    [
+     0,
+     "Во сколько выезд?",
+     "What time is check-out?"
+    ],
+    [
+     0,
+     "Какой пароль от вайфая?",
+     "What’s the Wi-Fi password?"
+    ]
+   ]
+  },
+  {
+   "name": "Знакомство",
+   "roles": [
+    "Я",
+    "Собеседник"
+   ],
+   "lines": [
+    [
+     1,
+     "Привет! Как тебя зовут?",
+     "Hi! What’s your name?"
+    ],
+    [
+     0,
+     "Меня зовут Бектас. А тебя?",
+     "My name is Bektas. And you?"
+    ],
+    [
+     1,
+     "Откуда ты?",
+     "Where are you from?"
+    ],
+    [
+     0,
+     "Я из Алматы, это в Казахстане.",
+     "I’m from Almaty. It’s in Kazakhstan."
+    ],
+    [
+     1,
+     "Чем ты занимаешься?",
+     "What do you do?"
+    ],
+    [
+     0,
+     "Я работаю в фитнес-баре при спортзале.",
+     "I work at a fitness bar in a gym."
+    ],
+    [
+     0,
+     "А ты чем занимаешься?",
+     "What about you? What do you do?"
+    ],
+    [
+     0,
+     "В свободное время я тренируюсь и учу языки.",
+     "In my free time, I work out and learn languages."
+    ],
+    [
+     0,
+     "Мой английский пока не очень хороший, говори помедленнее, пожалуйста.",
+     "My English isn’t very good yet. Could you speak a little slower, please?"
+    ],
+    [
+     0,
+     "Приятно познакомиться!",
+     "Nice to meet you!"
+    ],
+    [
+     0,
+     "Давай обменяемся номерами.",
+     "Let’s exchange numbers."
+    ]
+   ]
+  },
+  {
+   "name": "Аптека",
+   "roles": [
+    "Я",
+    "Фармацевт"
+   ],
+   "lines": [
+    [
+     0,
+     "Здравствуйте, у меня болит горло.",
+     "Hello, I have a sore throat."
+    ],
+    [
+     0,
+     "Что вы можете посоветовать?",
+     "What can you recommend?"
+    ],
+    [
+     1,
+     "У вас есть температура?",
+     "Do you have a fever?"
+    ],
+    [
+     0,
+     "Нет, только насморк и кашель.",
+     "No, just a runny nose and a cough."
+    ],
+    [
+     0,
+     "Нужен рецепт?",
+     "Do I need a prescription?"
+    ],
+    [
+     0,
+     "Как это принимать?",
+     "How should I take this?"
+    ],
+    [
+     1,
+     "По одной таблетке три раза в день после еды.",
+     "One tablet three times a day after meals."
+    ],
+    [
+     0,
+     "Есть что-нибудь подешевле?",
+     "Do you have anything cheaper?"
+    ]
+   ]
+  }
+ ]
+}
