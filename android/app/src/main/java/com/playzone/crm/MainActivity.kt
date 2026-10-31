@@ -37,6 +37,13 @@ class MainActivity : Activity() {
 
         PlayzoneNotifications.ensureChannels(this)
 
+        // Когда будильник открывает приложение — показываем его поверх
+        // экрана блокировки и включаем экран
+        if (Build.VERSION.SDK_INT >= 27) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        }
+
         val web = WebView(this)
         webView = web
         web.settings.apply {
@@ -202,7 +209,16 @@ button{background:#6366f1;color:#fff;border:none;border-radius:12px;padding:14px
                         )
                     )
                 }
-                AlarmScheduler.replaceAll(applicationContext, items)
+                val set = AlarmScheduler.replaceAll(applicationContext, items)
+                if (set >= 0) {
+                    runOnUiThread {
+                        Toast.makeText(
+                            this@MainActivity,
+                            if (set > 0) "⏰ Будильников поставлено: $set" else "⏰ Будильники сняты",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
             } catch (_: Exception) {
                 // кривой json — ждём следующей синхронизации (раз в 10 секунд)
             }
