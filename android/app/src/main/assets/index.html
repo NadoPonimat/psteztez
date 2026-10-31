@@ -1,0 +1,72 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>PlayZone</title>
+<style>
+:root{--bg:#0b0b0f;--card:#17171f;--tx:#f2f2f7;--mu:#8e8e9a;--ac:#7c5cff;--ok:#2ecc71;--bad:#ff5c6c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px system-ui,sans-serif;padding:calc(env(safe-area-inset-top) + 8px) 12px 90px}
+.c{background:var(--card);border-radius:14px;padding:12px;margin:10px 0}
+button{background:var(--ac);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-size:15px}
+button.g{background:#2a2a36}button.r{background:var(--bad)}button.s{padding:4px 8px;font-size:12px}
+input,select{width:100%;padding:10px;border-radius:10px;border:1px solid #333;background:#0f0f15;color:var(--tx);margin:4px 0;font-size:16px}
+.row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+nav button{flex:1;background:none;color:var(--mu);font-size:13px}nav button.on{color:var(--ac)}
+.big{font-size:26px;font-weight:700}.mu{color:var(--mu);font-size:13px}.ok{color:var(--ok)}.bad{color:var(--bad)}
+.ov{position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center;padding:18px;z-index:9}
+.ov>div{background:var(--card);border-radius:16px;padding:16px;width:100%;max-width:420px}
+</style></head><body><div id="app"></div><div id="m"></div>
+<script>
+const $=s=>document.querySelector(s);
+let D;try{D=JSON.parse(localStorage.getItem('pz'))}catch(e){}
+D=D||{users:[],ops:[],ses:[],price:{ps:3000,vr:5000},seq:1};
+const save=()=>{try{localStorage.setItem('pz',JSON.stringify(D))}catch(e){}};
+let me=null,tab='dev';
+const H=s=>{let h=5381;for(const c of s)h=(h*33)^c.charCodeAt(0);return String(h>>>0)};
+const money=n=>Math.round(n).toLocaleString('ru')+' ₸';
+const isToday=t=>new Date(t).toDateString()==new Date().toDateString();
+const devs=[1,2,3,4].map(n=>({id:'ps'+n,t:'ps',n:'PlayStation '+n})).concat([1,2].map(n=>({id:'vr'+n,t:'vr',n:'VR-кресло '+n})));
+const dn=id=>devs.find(d=>d.id==id).n;
+const chief=()=>me&&me.role=='chief';
+function sync(){try{window.PlayZoneNative&&PlayZoneNative.syncAlarms(JSON.stringify(D.ses.filter(s=>!s.done).map(s=>({id:s.id,endAt:s.end,title:'⏰ Время вышло!',body:dn(s.dev)+' · '+s.min+' мин · '+money(s.price)+' — сеанс нужно завершить',tag:'overdue-'+s.id}))))}catch(e){}}
+function bal(){const o=D.ops.filter(x=>isToday(x.t)).sort((a,b)=>a.t-b.t);const i=o.map(x=>x.k).lastIndexOf('open');let c=i>=0?o[i].a:0;
+for(const x of o.slice(i+1)){if(x.k=='pay')c+=x.cash||0;if((x.k=='adv'||x.k=='exp')&&x.src=='cash')c-=x.a}
+return{c,kz:o.filter(x=>x.k=='pay').reduce((s,x)=>s+(x.kaspi||0),0),o}}
+function modal(h,f){$('#m').innerHTML='<div class="ov"><div>'+h+'</div></div>';f&&f()}
+const close=()=>{$('#m').innerHTML=''};
+function ask(title,fields,ok){modal('<h3>'+title+'</h3>'+fields.map(f=>f.type=='select'?'<label class="mu">'+f.l+'</label><select id="f_'+f.k+'">'+f.o.map(o=>'<option value="'+o[0]+'">'+o[1]+'</option>').join('')+'</select>':'<label class="mu">'+f.l+'</label><input id="f_'+f.k+'" type="'+(f.type||'text')+'" '+(f.type=='number'?'inputmode="numeric"':'')+'>').join('')+'<div class="row" style="margin-top:10px"><button class="g" onclick="close()">Отмена</button><button id="ok">OK</button></div>',()=>{$('#ok').onclick=()=>{const v={};fields.forEach(f=>v[f.k]=$('#f_'+f.k).value.trim());if(fields.some(f=>f.req!==false&&v[f.k]===''&&f.type!='select'&&f.k!='note'))return alert('Заполните поля');close();ok(v)}})}
+function addOp(o){D.ops.push(Object.assign({t:Date.now(),who:me.login},o));save();render()}
+/* ---------- вход ---------- */
+function login(){if(!D.users.length){$('#app').innerHTML='<div class="c"><h2>PlayZone</h2><p class="mu">Первый запуск: создайте главный аккаунт</p><input id="l" placeholder="Логин"><input id="p" type="password" placeholder="Пароль"><button onclick="first()">Создать</button></div>';return}
+$('#app').innerHTML='<div class="c"><h2>PlayZone</h2><input id="l" placeholder="Логин" autocapitalize="none"><input id="p" type="password" placeholder="Пароль"><button onclick="enter()">Войти</button></div>'}
+function first(){const l=$('#l').value.trim(),p=$('#p').value;if(!l||p.length<4)return alert('Логин и пароль от 4 символов');D.users.push({login:l,name:l,h:H(p),role:'chief'});save();me=D.users[0];render()}
+function enter(){const u=D.users.find(u=>u.login==$('#l').value.trim()&&u.h==H($('#p').value));if(!u)return alert('Неверный логин или пароль');me=u;tab='dev';render()}
+/* ---------- сеансы ---------- */
+function startDev(id){const d=devs.find(d=>d.id==id);const pr=m=>Math.ceil(D.price[d.t]*m/60/100)*100;
+modal('<h3>'+d.n+'</h3><label class="mu">Время</label><select id="mn">'+[30,60,90,120,180].map(m=>'<option value="'+m+'">'+m+' мин</option>').join('')+'</select><div class="big" id="pr"></div><label class="mu">Оплата</label><select id="py"><option value="cash">Наличные</option><option value="kaspi">Каспи</option><option value="mix">Смежная (часть наличными, остальное Каспи)</option></select><div class="row" style="margin-top:10px"><button class="g" onclick="close()">Отмена</button><button id="go">Запустить</button></div>',()=>{
+const upd=()=>$('#pr').textContent=money(pr(+$('#mn').value));upd();$('#mn').onchange=upd;
+$('#go').onclick=()=>{const m=+$('#mn').value,p=pr(m),py=$('#py').value;
+const run=(cash,kz)=>{const s={id:D.seq++,dev:id,start:Date.now(),end:Date.now()+m*60000,min:m,price:p,who:me.login,done:false};D.ses.push(s);close();addOp({k:'pay',a:p,cash,kaspi:kz,sid:s.id,note:d.n+' '+m+' мин'});sync()};
+if(py=='cash')run(p,0);else if(py=='kaspi')run(0,p);else{const c=prompt('Сколько наличными? (из '+p+')');if(c===null)return;const n=Math.max(0,Math.min(p,+c||0));run(n,p-n)}}})}
+function endDev(sid){const s=D.ses.find(s=>s.id==sid);s.done=true;save();sync();render()}
+/* ---------- экраны ---------- */
+function render(){if(!me)return login();
+const nav='<nav>'+[['dev','Кабинет'],['cash','Касса'],['more',chief()?'Управление':'Ещё']].map(t=>'<button class="'+(tab==t[0]?'on':'')+'" onclick="tab=\''+t[0]+'\';render()">'+t[1]+'</button>').join('')+'</nav>';
+let h='<div class="row"><b>'+me.name+'</b><button class="g s" onclick="me=null;render()">Выйти</button></div>';
+if(tab=='dev')h+=devs.map(d=>{const s=D.ses.find(s=>s.dev==d.id&&!s.done);return '<div class="c"><div class="row"><b>'+d.n+'</b>'+(s?'<span class="big" data-t="'+s.id+'"></span>':'<span class="ok">свободно</span>')+'</div>'+(s?'<div class="mu">'+s.min+' мин · '+money(s.price)+' · '+s.who+'</div><button class="g" style="margin-top:8px" onclick="endDev('+s.id+')">Завершить</button>':'<button style="margin-top:8px" onclick="startDev(\''+d.id+'\')">Запустить</button>')+'</div>'}).join('');
+if(tab=='cash'){const b=bal();h+='<div class="c"><div class="mu">Касса наличных</div><div class="big">'+money(b.c)+'</div></div><div class="c"><div class="mu">Каспи за сегодня</div><div class="big">'+money(b.kz)+'</div></div><div class="row"><button onclick="opOpen()">Пересчитал</button><button onclick="opAdv()">Аванс</button><button onclick="opExp()">Расход</button></div><h3>Операции сегодня</h3>'+(b.o.slice().reverse().map(x=>'<div class="c"><div class="row"><span>'+({open:'Пересчёт кассы',pay:'Оплата',adv:'Аванс',exp:'Расход'}[x.k])+' · '+money(x.a)+'</span>'+(chief()?'<button class="r s" onclick="delOp('+x.t+')">Удалить</button>':'')+'</div><div class="mu">'+new Date(x.t).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})+' · '+x.who+(x.src?' · из: '+({cash:'кассы',chief:'от шефа',own:'своего кармана'}[x.src]):'')+(x.note?' · '+x.note:'')+'</div></div>').join('')||'<p class="mu">Пока пусто</p>')}
+if(tab=='more'){if(!chief())h+='<p class="mu">Остальное (график, отчёты, связь) — в следующих версиях.</p>';else h+='<div class="c"><b>Сотрудники</b>'+D.users.map(u=>'<div class="row"><span>'+u.name+' <span class="mu">('+u.login+')</span></span>'+(u.role!='chief'?'<button class="r s" onclick="delUser(\''+u.login+'\')">Удалить</button>':'')+'</div>').join('')+'<button style="margin-top:8px" onclick="addUser()">+ Сотрудник</button></div><div class="c"><b>Цены за час</b><div class="mu">PlayStation: '+money(D.price.ps)+' · VR: '+money(D.price.vr)+'</div><button class="g" style="margin-top:8px" onclick="setPrice()">Изменить цены</button></div>'}
+$('#app').innerHTML=h+nav;tick()}
+function opOpen(){ask('Пересчёт кассы',[{k:'a',l:'Сумма наличных в кассе',type:'number'}],v=>addOp({k:'open',a:+v.a}))}
+function opAdv(){ask('Аванс',[{k:'src',l:'Откуда',type:'select',o:[['cash','Касса наличных'],['chief','Перевод от шефа']]},{k:'a',l:'Сумма',type:'number'},{k:'note',l:'Примечание',req:false}],v=>addOp({k:'adv',a:+v.a,src:v.src,note:v.note}))}
+function opExp(){ask('Расход',[{k:'note',l:'Что оплатили'},{k:'src',l:'Откуда',type:'select',o:[['cash','Касса наличных'],['chief','Шеф'],['own','Свой карман']]},{k:'a',l:'Сумма',type:'number'}],v=>addOp({k:'exp',a:+v.a,src:v.src,note:v.note}))}
+function delOp(t){if(confirm('Удалить операцию?')){D.ops=D.ops.filter(x=>x.t!=t);save();render()}}
+function addUser(){ask('Новый сотрудник',[{k:'name',l:'Имя'},{k:'login',l:'Логин'},{k:'p',l:'Пароль (от 4 символов)'}],v=>{if(v.p.length<4||D.users.some(u=>u.login==v.login))return alert('Пароль короче 4 символов или логин занят');D.users.push({login:v.login,name:v.name,h:H(v.p),role:'staff'});save();render()})}
+function delUser(l){if(confirm('Удалить '+l+'?')){D.users=D.users.filter(u=>u.login!=l);save();render()}}
+function setPrice(){ask('Цена за час',[{k:'ps',l:'PlayStation, ₸',type:'number'},{k:'vr',l:'VR, ₸',type:'number'}],v=>{D.price={ps:+v.ps,vr:+v.vr};save();render()})}
+/* ---------- таймер и сирена ---------- */
+let ac,ring=null;
+function beep(){try{ac=ac||new AudioContext();const o=ac.createOscillator(),g=ac.createGain();o.type='square';o.frequency.value=880;g.gain.value=.25;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.4);navigator.vibrate&&navigator.vibrate([400,200,400])}catch(e){}}
+function tick(){const now=Date.now();document.querySelectorAll('[data-t]').forEach(e=>{const s=D.ses.find(s=>s.id==e.dataset.t);if(!s)return;let r=Math.round((s.end-now)/1000),neg=r<0;r=Math.abs(r);e.textContent=(neg?'+':'')+String(Math.floor(r/60)).padStart(2,'0')+':'+String(r%60).padStart(2,'0');e.className='big '+(neg?'bad':'')});
+if(me&&!ring){const s=D.ses.find(s=>!s.done&&!s.seen&&s.end<=now);if(s){ring=s.id;modal('<h2>⏰ Время вышло!</h2><p>'+dn(s.dev)+' · '+s.min+' мин</p><button onclick="seen()">Принять</button>');beep()}}else if(ring&&now%1500<1000)beep()}
+function seen(){const s=D.ses.find(s=>s.id==ring);if(s)s.seen=true;ring=null;save();close()}
+setInterval(tick,1000);sync();render();
+</script></body></html>
